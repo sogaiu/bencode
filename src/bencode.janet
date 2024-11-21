@@ -3,16 +3,16 @@
 #
 
 # Special ASCII characters use during parsing
-(def- NEW-LINE 10)
-(def- CARRIAGE-RETURN 13)
-(def- MINUS 45)
-(def- LENGTH-SEPARATOR 58)
-(def- DICTIONARY-FLAG 100)
-(def- END-FLAG 101)
-(def- INT-FLAG 105)
-(def- LIST-FLAG 108)
+(def NEW-LINE 10)
+(def CARRIAGE-RETURN 13)
+(def MINUS 45)
+(def LENGTH-SEPARATOR 58)
+(def DICTIONARY-FLAG 100)
+(def END-FLAG 101)
+(def INT-FLAG 105)
+(def LIST-FLAG 108)
 
-(defn- parse-error
+(defn parse-error
   "Throws an error with the provided message for the given reader, the error
   will include the index of the reader."
   [message &opt reader-in]
@@ -20,14 +20,14 @@
     (error (string message " at index " (reader-in :index)))
     (error (string message))))
 
-(defn- write-error
+(defn write-error
   "Throws an error with the provided message for the given data object"
   [message &opt data]
   (if data
     (error (string message " when writing data of type " (type data)))
     (error (string message))))
 
-(defn- peek-byte
+(defn peek-byte
   "Returns the byte at the reader's current index"
   [reader-in]
   (when (nil? (reader-in :index))
@@ -35,7 +35,7 @@
   (let [byte (get (reader-in :buffer) (reader-in :index))]
     byte))
 
-(defn- end?
+(defn end?
   "Returns true if the index points to the end of the buffer"
   [reader-in]
   (cond
@@ -47,7 +47,7 @@
 
     false))
 
-(defn- read-byte-buffer
+(defn read-byte-buffer
   "Returns the byte at the reader's current index and advances the index"
   [reader-in]
   (if (end? reader-in)
@@ -57,7 +57,7 @@
       (put reader-in :index index)
       (peek-byte reader-in))))
 
-(defn- read-byte-stream
+(defn read-byte-stream
   "Reads another byte from the stream, appends it to the buffer for the reader,
   increments the index and returns that byte"
   [reader-in]
@@ -68,7 +68,7 @@
     (put reader-in :index index)
     (peek-byte reader-in)))
 
-(defn- read-byte
+(defn read-byte
   "Reads the next byte from the provided reader. If the reader is wrapping a
   network stream, this function will block until a byte is available to read"
   [reader-in]
@@ -76,7 +76,7 @@
     (read-byte-stream reader-in)
     (read-byte-buffer reader-in)))
 
-(defn- match-byte
+(defn match-byte
   "If the reader's next byte  matches the provided byte, advances the reader"
   [reader-in byte]
   (let [byte-in (read-byte reader-in)]
@@ -84,18 +84,18 @@
       byte-in
       false)))
 
-(defn- pushback-byte
+(defn pushback-byte
   [reader-in]
   (let [index (if (= 0 (reader-in :index))
                 nil (- (reader-in :index) 1))]
     (put reader-in :index index)))
 
-(defn- digit-byte?
+(defn digit-byte?
   "Returns true if the provided byte represents a digit"
   [byte]
   (if (and (< 47 byte) (> 58 byte)) true false))
 
-(defn- read-integer-bytes
+(defn read-integer-bytes
   "Reads the next integer from the buffer
 
   The integer may include a minus indicating sign, we simply keep reading bytes
@@ -118,7 +118,7 @@
       (scan-number buffer-out)
       (parse-error "Could not read integer" reader-in))))
 
-(defn- read-integer
+(defn read-integer
   "Reads a bencoded integer from the reader"
   [reader-in]
   (if-not (= INT-FLAG (peek-byte reader-in))
@@ -130,7 +130,7 @@
       (parse-error "Unterminated integer" reader-in))
     int-in))
 
-(defn- read-string
+(defn read-string
   "Reads a bencoded binary string from the reader"
   [return-mutable reader-in]
   (let [length (read-integer-bytes reader-in)
@@ -148,7 +148,7 @@
       buffer-out
       (string buffer-out))))
 
-(defn- read-list
+(defn read-list
   "Reads a list, using the read-bencode-fn to parse nested structures, from
   the reader"
   [read-bencode-fn return-mutable reader-in]
@@ -166,7 +166,7 @@
       list-out
       (tuple ;list-out))))
 
-(defn- read-dictionary
+(defn read-dictionary
   "Reads a dictionary, using the read-bencode-fn to parse nested structures,
   from the reader"
   [read-bencode-fn keyword-dicts return-mutable reader-in]
@@ -191,13 +191,13 @@
       dict-out
       (table/to-struct dict-out))))
 
-(defn- newline?
+(defn newline?
   [byte-in]
   (if (or (= NEW-LINE byte-in)
           (= CARRIAGE-RETURN byte-in))
     true false))
 
-(defn- read-newlines
+(defn read-newlines
   "Reads one or more new lines from the reader"
   [reader-in]
   (while (and (not (end? reader-in))
@@ -205,14 +205,14 @@
     (read-byte reader-in))
   nil)
 
-(defn- compact-reader
+(defn compact-reader
   "If the reader is backed by a stream, clears the buffer and resets the index."
   [reader-in]
   (when (reader-in :stream)
     (put reader-in :index nil)
     (put reader-in :buffer @"")))
 
-(defn- read-bencode
+(defn read-bencode
   "Reads the next bencoded value from the reader, returns null if there is no
   data left to read.
 
@@ -341,21 +341,21 @@
           :ignore-newlines ignore-newlines
           :return-mutable return-mutable)))
 
-(defn- write-integer
+(defn write-integer
   "Writes the bencoded representation of the provided integer to the buffer."
   [buffer-out int-in]
   (buffer/push-byte buffer-out INT-FLAG)
   (buffer/push-string buffer-out (string int-in))
   (buffer/push-byte buffer-out END-FLAG))
 
-(defn- write-string
+(defn write-string
   "Writes the bencoded represnetation of the provided string to the buffer."
   [buffer-out string-in]
   (buffer/push-string buffer-out (string (length string-in)))
   (buffer/push-byte buffer-out LENGTH-SEPARATOR)
   (buffer/push-string buffer-out string-in))
 
-(defn- write-list
+(defn write-list
   "Writes the bencoded representation of the provide list to the buffer,
   the write-fn is used to encoded nested structures."
   [write-fn buffer-out list-in]
@@ -365,7 +365,7 @@
          (write-fn buffer-out (get sorted-in index))))
   (buffer/push-byte buffer-out END-FLAG))
 
-(defn- write-map
+(defn write-map
   "Writes the bencoded representation of the provided map to the buffer, the
   write-fn is used to encode nested structures. Keywords are transformed into
   strings (i.e. \":key\" becomes \"key\")."
